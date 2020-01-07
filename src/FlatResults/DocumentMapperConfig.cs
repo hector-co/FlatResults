@@ -1,23 +1,40 @@
-﻿using FlatResults.Model;
+﻿using FlatResults.Exceptions;
+using FlatResults.Model;
 using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Linq.Expressions;
 
 namespace FlatResults
 {
     public static class DocumentMapperConfig
     {
-        private static Dictionary<Type, IResourceDefinition> _definitions = new Dictionary<Type, IResourceDefinition>();
+        private static ConcurrentDictionary<Type, IResourceDefinition> _definitions = new ConcurrentDictionary<Type, IResourceDefinition>();
 
         public static ResourceDefinitionMapperConfig<TType> ForType<TType>()
         {
-            if (!_definitions.ContainsKey(typeof(TType))) _definitions.Add(typeof(TType), new ResourceDefinition<TType>());
+            if (!_definitions.ContainsKey(typeof(TType))) _definitions.TryAdd(typeof(TType), new ResourceDefinition<TType>());
             return new ResourceDefinitionMapperConfig<TType>(_definitions[typeof(TType)]);
+        }
+
+        public static ResourceDefinitionMapperConfig<TType> NewConfig<TType>()
+        {
+            if (_definitions.ContainsKey(typeof(TType)))
+                _definitions.TryRemove(typeof(TType), out var _);
+            _definitions.TryAdd(typeof(TType), new ResourceDefinition<TType>());
+            return new ResourceDefinitionMapperConfig<TType>(_definitions[typeof(TType)]);
+        }
+
+        public static void ClearConfigs()
+        {
+            _definitions = new ConcurrentDictionary<Type, IResourceDefinition>();
         }
 
         internal static IResourceDefinition GetDefinition<TType>()
         {
-            return _definitions[typeof(TType)];
+            var key = typeof(TType);
+            if (!_definitions.ContainsKey(key))
+                throw new ConfigNotFoundException();
+            return _definitions[key];
         }
     }
 
@@ -66,7 +83,12 @@ namespace FlatResults
             return WithRelationship(propInfo.Name);
         }
 
-        public ResourceDefinitionMapperConfig<TType> ExcludeNonMapped()
+        public ResourceDefinitionMapperConfig<TType> MapWithDetaults()
+        {
+            return this;
+        }
+
+        public ResourceDefinitionMapperConfig<TType> Ignore<TProperty>(Expression<Func<TType, TProperty>> property)
         {
             return this;
         }

@@ -1,5 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using FlatResults.Exceptions;
+using System;
+using System.Collections.Concurrent;
 using System.Linq;
 
 namespace FlatResults.Model
@@ -8,14 +9,14 @@ namespace FlatResults.Model
     {
         private readonly Type _type;
         private Func<object, object> _id;
-        private readonly Dictionary<string, Func<object, object>> _attributes;
-        private readonly Dictionary<string, Func<object, object>> _relationships;
+        private readonly ConcurrentDictionary<string, Func<object, object>> _attributes;
+        private readonly ConcurrentDictionary<string, Func<object, object>> _relationships;
 
         public ResourceDefinition()
         {
             _type = typeof(T);
-            _attributes = new Dictionary<string, Func<object, object>>();
-            _relationships = new Dictionary<string, Func<object, object>>();
+            _attributes = new ConcurrentDictionary<string, Func<object, object>>();
+            _relationships = new ConcurrentDictionary<string, Func<object, object>>();
 
             SetId("Id");
             if (_id == null) SetId($"{_type.Name}Id");
@@ -32,19 +33,20 @@ namespace FlatResults.Model
         {
             var prop = _type.GetProperty(name);
             if (prop == null) return;
-            _attributes.Add(name, prop.GetValue);
+            _attributes.TryAdd(name, prop.GetValue);
         }
 
         public void AddRelationShip(string name)
         {
             var prop = _type.GetProperty(name);
             if (prop == null) return;
-            _relationships.Add(name, prop.GetValue);
+            _relationships.TryAdd(name, prop.GetValue);
         }
 
         public Document ToDocument(object obj, bool identifierOnly = false)
         {
-            if (!(obj is T tObj)) throw new Exception("Invalid type");
+            if (!(obj is T tObj)) throw new FlatResultsException("Invalid type");
+            if (_id == null) throw new IdPropertyNotFoundException();
             var document = new Document();
             if (identifierOnly)
             {
@@ -64,8 +66,6 @@ namespace FlatResults.Model
 
         private Resource ToResource(T obj)
         {
-            if (_id == null) throw new Exception("Id not set");
-
             var resource = new Resource
             {
                 Id = _id(obj).ToString(),
