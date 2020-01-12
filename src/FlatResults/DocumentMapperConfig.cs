@@ -2,6 +2,7 @@
 using FlatResults.Model;
 using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Linq.Expressions;
 
 namespace FlatResults
@@ -12,16 +13,19 @@ namespace FlatResults
 
         public static ResourceDefinitionMapperConfig<TType> ForType<TType>()
         {
-            if (!_definitions.ContainsKey(typeof(TType))) _definitions.TryAdd(typeof(TType), new ResourceDefinition<TType>());
-            return new ResourceDefinitionMapperConfig<TType>(_definitions[typeof(TType)]);
+            AdjustRelationships<TType>();
+            if (!_definitions.ContainsKey(typeof(TType)))
+                _definitions.TryAdd(typeof(TType), new ResourceDefinition<TType>());
+            return new ResourceDefinitionMapperConfig<TType>(_definitions);
         }
 
         public static ResourceDefinitionMapperConfig<TType> NewConfig<TType>()
         {
+            AdjustRelationships<TType>();
             if (_definitions.ContainsKey(typeof(TType)))
                 _definitions.TryRemove(typeof(TType), out var _);
             _definitions.TryAdd(typeof(TType), new ResourceDefinition<TType>());
-            return new ResourceDefinitionMapperConfig<TType>(_definitions[typeof(TType)]);
+            return new ResourceDefinitionMapperConfig<TType>(_definitions);
         }
 
         public static void ClearConfigs()
@@ -36,20 +40,35 @@ namespace FlatResults
                 throw new ConfigNotFoundException();
             return _definitions[key];
         }
+
+        private static void AdjustRelationships<TType>()
+        {
+            foreach (var definition in _definitions)
+            {
+                foreach (var attribute in definition.Value.Attributes)
+                {
+                    if (attribute.Value == typeof(TType) || attribute.Value.IsGenericOf<TType>())
+                    {
+                        definition.Value.RemoveAttribute(attribute.Key);
+                        definition.Value.AddRelationShip(attribute.Key, attribute.Value);
+                    }
+                }
+            }
+        }
     }
 
     public class ResourceDefinitionMapperConfig<TType>
     {
-        private readonly IResourceDefinition _definition;
+        private readonly ConcurrentDictionary<Type, IResourceDefinition> _definitions;
 
-        public ResourceDefinitionMapperConfig(IResourceDefinition definition)
+        public ResourceDefinitionMapperConfig(ConcurrentDictionary<Type, IResourceDefinition> definitions)
         {
-            _definition = definition;
+            _definitions = definitions;
         }
 
         public ResourceDefinitionMapperConfig<TType> WithId(string name)
         {
-            _definition.SetId(name);
+            _definitions[typeof(TType)].SetId(name);
             return this;
         }
 
@@ -59,32 +78,39 @@ namespace FlatResults
             return WithId(propInfo.Name);
         }
 
-        public ResourceDefinitionMapperConfig<TType> WithAttribute(string name)
+        public ResourceDefinitionMapperConfig<TType> WithAttribute(string name, Type type)
         {
-            _definition.AddAttribute(name);
+            _definitions[typeof(TType)].AddAttribute(name, type);
             return this;
         }
 
         public ResourceDefinitionMapperConfig<TType> WithAttribute<TProperty>(Expression<Func<TType, TProperty>> property)
         {
             if (!property.TryGetPropertyInfo(out var propInfo)) return this;
-            return WithAttribute(propInfo.Name);
+            return WithAttribute(propInfo.Name, propInfo.PropertyType);
         }
 
-        public ResourceDefinitionMapperConfig<TType> WithRelationship(string name)
+        public ResourceDefinitionMapperConfig<TType> WithRelationship(string name, Type type)
         {
-            _definition.AddRelationShip(name);
+            _definitions[typeof(TType)].AddRelationShip(name, type);
             return this;
         }
 
         public ResourceDefinitionMapperConfig<TType> WithRelationship<TProperty>(Expression<Func<TType, TProperty>> property)
         {
             if (!property.TryGetPropertyInfo(out var propInfo)) return this;
-            return WithRelationship(propInfo.Name);
+            return WithRelationship(propInfo.Name, propInfo.PropertyType);
         }
 
         public ResourceDefinitionMapperConfig<TType> MapWithDetaults()
         {
+            foreach (var propInfo in typeof(TType).GetCachedProperties())
+            {
+                if (_definitions.ContainsKey(propInfo.PropertyType))
+                    _definitions[typeof(TType)].AddRelationShip(propInfo.Name, propInfo.PropertyType);
+                else
+                    _definitions[typeof(TType)].AddAttribute(propInfo.Name, propInfo.PropertyType);
+            }
             return this;
         }
 

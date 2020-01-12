@@ -89,6 +89,32 @@ namespace FlatResults.Tests
         }
 
         [Fact]
+        public void MapNullProperties()
+        {
+            const int CategoryId = 1;
+            const string CategoryName = null;
+
+            DocumentMapperConfig.NewConfig<Category>()
+                .WithId(c => c.Id)
+                .WithAttribute(c => c.Name);
+
+            var category = new Category
+            {
+                Id = CategoryId,
+                Name = CategoryName
+            };
+
+
+            var document = category.ToDocument();
+
+
+            var resource = (Resource)document.Data;
+            resource.Id.Should().Be(CategoryId.ToString());
+            resource.Attributes.Should().ContainKey(nameof(Category.Name));
+            resource.Attributes[nameof(Category.Name)].Should().Be(CategoryName);
+        }
+
+        [Fact]
         public void MapIdAndProperties()
         {
             const int CategoryId = 1;
@@ -149,11 +175,11 @@ namespace FlatResults.Tests
 
             var resource = (Resource)document.Data;
             resource.Relationships.Should().ContainKey(nameof(Product.Category));
-            
+
             var categoryRelationship = (Resource)resource.Relationships[nameof(Product.Category)].Data;
             categoryRelationship.Id.Should().Be(CategoryId.ToString());
             categoryRelationship.Attributes.Should().BeNull();
-            
+
             document.Included.Should().NotBeNull();
             document.Included.Should().NotBeEmpty();
             var categoryResource = document.Included.ElementAt(0);
@@ -162,6 +188,179 @@ namespace FlatResults.Tests
             categoryResource.Attributes[nameof(Category.Name)].Should().Be(CategoryName);
         }
 
+        [Fact]
+        public void MapNullRelationship()
+        {
+            DocumentMapperConfig.NewConfig<Product>()
+                .WithId(p => p.Id)
+                .WithAttribute(p => p.Active)
+                .WithRelationship(p => p.Category);
+
+            DocumentMapperConfig.NewConfig<Category>()
+                .WithId(p => p.Id)
+                .WithAttribute(p => p.Name);
+
+            var product = new Product
+            {
+                Category = null
+            };
+
+
+            var document = product.ToDocument();
+
+
+            var resource = (Resource)document.Data;
+            resource.Relationships.Should().NotContainKey(nameof(Product.Category));
+        }
+
+        [Fact]
+        public void MapWithDefaults()
+        {
+            const int CategoryId = 1;
+            const string CategoryName = "Category1";
+            const string CategoryDescription = "Description Category1";
+
+            DocumentMapperConfig.NewConfig<Category>()
+                .MapWithDetaults();
+
+            var category = new Category
+            {
+                Id = CategoryId,
+                Name = CategoryName,
+                Description = CategoryDescription
+            };
+
+
+            var document = category.ToDocument();
+
+
+            var resource = (Resource)document.Data;
+            resource.Id.Should().Be(CategoryId.ToString());
+            resource.Attributes.Should().ContainKey(nameof(Category.Name));
+            resource.Attributes[nameof(Category.Name)].Should().Be(CategoryName);
+            resource.Attributes.Should().ContainKey(nameof(Category.Description));
+            resource.Attributes[nameof(Category.Description)].Should().Be(CategoryDescription);
+        }
+
+        [Fact]
+        public void MapRelationshipWithDefaults()
+        {
+            const int CategoryId = 1;
+            const string CategoryName = "Category1";
+
+            DocumentMapperConfig.NewConfig<Product>()
+                .MapWithDetaults();
+
+            DocumentMapperConfig.NewConfig<Category>()
+                .MapWithDetaults();
+
+            var product = new Product
+            {
+                Category = new Category
+                {
+                    Id = CategoryId,
+                    Name = CategoryName
+                }
+            };
+
+
+            var document = product.ToDocument();
+
+
+            var resource = (Resource)document.Data;
+            resource.Relationships.Should().ContainKey(nameof(Product.Category));
+
+            var categoryRelationship = (Resource)resource.Relationships[nameof(Product.Category)].Data;
+            categoryRelationship.Id.Should().Be(CategoryId.ToString());
+            categoryRelationship.Attributes.Should().BeNull();
+
+            document.Included.Should().NotBeNull();
+            document.Included.Should().NotBeEmpty();
+            var categoryResource = document.Included.ElementAt(0);
+            categoryRelationship.Id.Should().Be(CategoryId.ToString());
+            categoryResource.Attributes.Should().ContainKey(nameof(Category.Name));
+            categoryResource.Attributes[nameof(Category.Name)].Should().Be(CategoryName);
+        }
+
+        [Fact]
+        public void MapGenericRelationshipWithDefaults()
+        {
+            const int UnitOfMeasure1Id = 1;
+            const string UnitOfMeasure1Name = "Unit1";
+            const int UnitOfMeasure2Id = 2;
+            const string UnitOfMeasure2Name = "Unit2";
+
+            DocumentMapperConfig.NewConfig<Product>()
+                .MapWithDetaults();
+
+            DocumentMapperConfig.NewConfig<UnitOfMeasure>()
+                .MapWithDetaults();
+
+            var product = new Product
+            {
+                Units = new List<UnitOfMeasure>
+                {
+                    new UnitOfMeasure
+                    {
+                        Id = UnitOfMeasure1Id,
+                        Name = UnitOfMeasure1Name
+                    },
+                    new UnitOfMeasure
+                    {
+                        Id = UnitOfMeasure2Id,
+                        Name = UnitOfMeasure2Name
+                    }
+                }
+            };
+
+
+            var document = product.ToDocument();
+
+
+            var resource = (Resource)document.Data;
+            resource.Relationships.Should().ContainKey(nameof(Product.Units));
+
+            var unitRelationship = (ResourceCollection)resource.Relationships[nameof(Product.Units)].Data;
+            unitRelationship.Count().Should().Be(2);
+            //unitRelationship.Id.Should().Be(UnitOfMeasure1Id.ToString());
+            //unitRelationship.Attributes.Should().BeNull();
+
+            //document.Included.Should().NotBeNull();
+            //document.Included.Should().NotBeEmpty();
+            //var categoryResource = document.Included.ElementAt(0);
+            //categoryRelationship.Id.Should().Be(UnitOfMeasure1Id.ToString());
+            //categoryResource.Attributes.Should().ContainKey(nameof(Category.Name));
+            //categoryResource.Attributes[nameof(Category.Name)].Should().Be(UnitOfMeasure1Name);
+        }
+
+        //DocumentMapperConfig.NewConfig<Product>()
+        //    .MapWithDetaults();
+
+        //DocumentMapperConfig.NewConfig<Category>()
+        //    .MapWithDetaults();
+
+        //DocumentMapperConfig.NewConfig<UnitOfMeasure>()
+        //    .MapWithDetaults();
+
+        //[Fact]
+        //public void Test1()
+        //{
+        //    DocumentMapperConfig.ForType<Product>()
+        //        .WithId(p => p.Id)
+        //        .WithAttribute(p => p.Active)
+        //        .WithRelationship(p => p.Category)
+        //        .WithRelationship(p => p.Units);
+
+        //    DocumentMapperConfig.ForType<Category>()
+        //        .WithId(p => p.Id)
+        //        .WithAttribute(p => p.Name)
+        //        .WithAttribute(p => p.Description);
+
+        //    DocumentMapperConfig.ForType<UnitOfMeasure>()
+        //        .WithId(p => p.Id)
+        //        .WithAttribute(p => p.Name)
+        //        .WithAttribute(p => p.Description);
+        //}
     }
 
     public class Product

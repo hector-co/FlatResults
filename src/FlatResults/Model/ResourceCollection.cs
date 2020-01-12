@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace FlatResults.Model
 {
-    internal class ResourceCollection : IEnumerable<IData>, IData
+    public class ResourceCollection : IEnumerable<IData>, IData
     {
         private readonly HashSet<IData> _resources;
 

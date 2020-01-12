@@ -1,6 +1,6 @@
 ﻿using FlatResults.Exceptions;
 using System;
-using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace FlatResults.Model
@@ -9,14 +9,18 @@ namespace FlatResults.Model
     {
         private readonly Type _type;
         private Func<object, object> _id;
-        private readonly ConcurrentDictionary<string, Func<object, object>> _attributes;
-        private readonly ConcurrentDictionary<string, Func<object, object>> _relationships;
+        private readonly Dictionary<string, (Func<object, object> setter, Type type)> _attributes;
+        private readonly Dictionary<string, (Func<object, object> setter, Type type)> _relationships;
+
+        public IReadOnlyDictionary<string, Type> Attributes => _attributes.ToDictionary(a => a.Key, a => a.Value.type);
+
+        public IReadOnlyDictionary<string, Type> Relationships => _relationships.ToDictionary(a => a.Key, a => a.Value.type);
 
         public ResourceDefinition()
         {
             _type = typeof(T);
-            _attributes = new ConcurrentDictionary<string, Func<object, object>>();
-            _relationships = new ConcurrentDictionary<string, Func<object, object>>();
+            _attributes = new Dictionary<string, (Func<object, object> setter, Type type)>();
+            _relationships = new Dictionary<string, (Func<object, object> setter, Type type)>();
 
             SetId("Id");
             if (_id == null) SetId($"{_type.Name}Id");
@@ -24,29 +28,39 @@ namespace FlatResults.Model
 
         public void SetId(string name)
         {
-            var prop = _type.GetProperty(name);
+            var prop = _type.GetCachedProperties().FirstOrDefault(p => p.Name == name);
             if (prop == null) return;
             _id = prop.GetValue;
         }
 
-        public void AddAttribute(string name)
+        public void AddAttribute(string name, Type type)
         {
-            var prop = _type.GetProperty(name);
+            var prop = _type.GetCachedProperties().FirstOrDefault(p => p.Name == name);
             if (prop == null) return;
-            _attributes.TryAdd(name, prop.GetValue);
+            _attributes.TryAdd(name, (prop.GetValue, type));
         }
 
-        public void AddRelationShip(string name)
+        public void RemoveAttribute(string name)
         {
-            var prop = _type.GetProperty(name);
+            _attributes.Remove(name);
+        }
+
+        public void AddRelationShip(string name, Type type)
+        {
+            var prop = _type.GetCachedProperties().FirstOrDefault(p => p.Name == name);
             if (prop == null) return;
-            _relationships.TryAdd(name, prop.GetValue);
+            _relationships.TryAdd(name, (prop.GetValue, type));
+        }
+
+        public void RemoveRelationship(string name)
+        {
+            _relationships.Remove(name);
         }
 
         public Document ToDocument(object obj, bool identifierOnly = false)
         {
-            if (!(obj is T tObj)) throw new FlatResultsException("Invalid type");
             if (_id == null) throw new IdPropertyNotFoundException();
+            if (!(obj is T tObj)) throw new FlatResultsException("Invalid type");
             var document = new Document();
             if (identifierOnly)
             {
@@ -77,7 +91,7 @@ namespace FlatResults.Model
                 resource.Attributes = new ResourceAttributes();
                 foreach (var attrKey in _attributes.Keys)
                 {
-                    resource.Attributes.Add(attrKey, _attributes[attrKey](obj));
+                    resource.Attributes.Add(attrKey, _attributes[attrKey].setter(obj));
                 }
             }
 
@@ -86,7 +100,9 @@ namespace FlatResults.Model
                 resource.Relationships = new ResourceRelationships();
                 foreach (var relKey in _relationships.Keys)
                 {
-                    resource.Relationships.Add(relKey, DocumentExtensions.ToDocument(_relationships[relKey](obj) as dynamic, true));
+                    var relValue = _relationships[relKey].setter(obj);
+                    if (relValue == null) continue;
+                    resource.Relationships.Add(relKey, DocumentExtensions.ToDocument(relValue as dynamic, true));
                 }
             }
 
@@ -99,7 +115,9 @@ namespace FlatResults.Model
             {
                 foreach (var relKey in _relationships.Keys)
                 {
-                    var relDocument = (Document)DocumentExtensions.ToDocument(_relationships[relKey](obj) as dynamic);
+                    var includedValue = _relationships[relKey].setter(obj);
+                    if (includedValue == null) continue;
+                    var relDocument = (Document)DocumentExtensions.ToDocument(includedValue as dynamic);
                     document.AppendIncluded(relDocument.Data as dynamic);
                     if (relDocument.Included != null)
                         document.AppendIncluded(relDocument.Included);

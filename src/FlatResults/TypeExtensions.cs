@@ -27,5 +27,12 @@ namespace FlatResults
             propInfo = member.Member as PropertyInfo;
             return propInfo != null;
         }
+
+        public static bool IsGenericOf<T>(this Type type)
+        {
+            if (!type.IsGenericType) return false;
+            var genericArg = type.GetGenericArguments()[0];
+            return genericArg == typeof(T);
+        }
     }
 }
