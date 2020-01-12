@@ -2,7 +2,7 @@
 using FlatResults.Model;
 using System;
 using System.Collections.Concurrent;
-using System.Linq;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 
 namespace FlatResults
@@ -10,22 +10,30 @@ namespace FlatResults
     public static class DocumentMapperConfig
     {
         private static ConcurrentDictionary<Type, IResourceDefinition> _definitions = new ConcurrentDictionary<Type, IResourceDefinition>();
+        private static ConcurrentDictionary<Type, HashSet<string>> _ignoredFields = new ConcurrentDictionary<Type, HashSet<string>>();
 
         public static ResourceDefinitionMapperConfig<TType> ForType<TType>()
         {
             AdjustRelationships<TType>();
             if (!_definitions.ContainsKey(typeof(TType)))
+            {
                 _definitions.TryAdd(typeof(TType), new ResourceDefinition<TType>());
-            return new ResourceDefinitionMapperConfig<TType>(_definitions);
+                _ignoredFields.TryAdd(typeof(TType), new HashSet<string>());
+            }
+            return new ResourceDefinitionMapperConfig<TType>(_definitions, _ignoredFields);
         }
 
         public static ResourceDefinitionMapperConfig<TType> NewConfig<TType>()
         {
             AdjustRelationships<TType>();
             if (_definitions.ContainsKey(typeof(TType)))
+            {
                 _definitions.TryRemove(typeof(TType), out var _);
+                _ignoredFields.TryRemove(typeof(TType), out var _);
+            }
             _definitions.TryAdd(typeof(TType), new ResourceDefinition<TType>());
-            return new ResourceDefinitionMapperConfig<TType>(_definitions);
+            _ignoredFields.TryAdd(typeof(TType), new HashSet<string>());
+            return new ResourceDefinitionMapperConfig<TType>(_definitions, _ignoredFields);
         }
 
         public static void ClearConfigs()
@@ -60,10 +68,12 @@ namespace FlatResults
     public class ResourceDefinitionMapperConfig<TType>
     {
         private readonly ConcurrentDictionary<Type, IResourceDefinition> _definitions;
+        private readonly ConcurrentDictionary<Type, HashSet<string>> _ignoredFields;
 
-        public ResourceDefinitionMapperConfig(ConcurrentDictionary<Type, IResourceDefinition> definitions)
+        public ResourceDefinitionMapperConfig(ConcurrentDictionary<Type, IResourceDefinition> definitions, ConcurrentDictionary<Type, HashSet<string>> ignoredFields)
         {
             _definitions = definitions;
+            _ignoredFields = ignoredFields;
         }
 
         public ResourceDefinitionMapperConfig<TType> WithId(string name)
@@ -106,6 +116,7 @@ namespace FlatResults
         {
             foreach (var propInfo in typeof(TType).GetCachedProperties())
             {
+                if (_ignoredFields[typeof(TType)].Contains(propInfo.Name)) continue;
                 if (_definitions.ContainsKey(propInfo.PropertyType))
                     _definitions[typeof(TType)].AddRelationShip(propInfo.Name, propInfo.PropertyType);
                 else
@@ -116,6 +127,19 @@ namespace FlatResults
 
         public ResourceDefinitionMapperConfig<TType> Ignore<TProperty>(Expression<Func<TType, TProperty>> property)
         {
+            if (!property.TryGetPropertyInfo(out var propInfo)) return this;
+            _ignoredFields[typeof(TType)].Add(propInfo.Name);
+            var ignoredFields = _ignoredFields[typeof(TType)];
+            foreach (var attribute in _definitions[typeof(TType)].Attributes)
+            {
+                if (ignoredFields.Contains(attribute.Key))
+                    _definitions[typeof(TType)].RemoveAttribute(attribute.Key);
+            }
+            foreach (var relationship in _definitions[typeof(TType)].Relationships)
+            {
+                if (ignoredFields.Contains(relationship.Key))
+                    _definitions[typeof(TType)].RemoveRelationship(relationship.Key);
+            }
             return this;
         }
     }

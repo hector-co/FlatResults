@@ -322,45 +322,131 @@ namespace FlatResults.Tests
 
             var unitRelationship = (ResourceCollection)resource.Relationships[nameof(Product.Units)].Data;
             unitRelationship.Count().Should().Be(2);
-            //unitRelationship.Id.Should().Be(UnitOfMeasure1Id.ToString());
-            //unitRelationship.Attributes.Should().BeNull();
-
-            //document.Included.Should().NotBeNull();
-            //document.Included.Should().NotBeEmpty();
-            //var categoryResource = document.Included.ElementAt(0);
-            //categoryRelationship.Id.Should().Be(UnitOfMeasure1Id.ToString());
-            //categoryResource.Attributes.Should().ContainKey(nameof(Category.Name));
-            //categoryResource.Attributes[nameof(Category.Name)].Should().Be(UnitOfMeasure1Name);
         }
 
-        //DocumentMapperConfig.NewConfig<Product>()
-        //    .MapWithDetaults();
+        [Fact]
+        public void MapWithDefaultsIgnoringAttributes()
+        {
+            const int CategoryId = 1;
+            const string CategoryName = "Category1";
+            const string CategoryDescription = "Description Category1";
 
-        //DocumentMapperConfig.NewConfig<Category>()
-        //    .MapWithDetaults();
+            DocumentMapperConfig.NewConfig<Category>()
+                .MapWithDetaults()
+                .Ignore(c => c.Description);
 
-        //DocumentMapperConfig.NewConfig<UnitOfMeasure>()
-        //    .MapWithDetaults();
+            var category = new Category
+            {
+                Id = CategoryId,
+                Name = CategoryName,
+                Description = CategoryDescription
+            };
 
-        //[Fact]
-        //public void Test1()
-        //{
-        //    DocumentMapperConfig.ForType<Product>()
-        //        .WithId(p => p.Id)
-        //        .WithAttribute(p => p.Active)
-        //        .WithRelationship(p => p.Category)
-        //        .WithRelationship(p => p.Units);
 
-        //    DocumentMapperConfig.ForType<Category>()
-        //        .WithId(p => p.Id)
-        //        .WithAttribute(p => p.Name)
-        //        .WithAttribute(p => p.Description);
+            var document = category.ToDocument();
 
-        //    DocumentMapperConfig.ForType<UnitOfMeasure>()
-        //        .WithId(p => p.Id)
-        //        .WithAttribute(p => p.Name)
-        //        .WithAttribute(p => p.Description);
-        //}
+
+            var resource = (Resource)document.Data;
+            resource.Id.Should().Be(CategoryId.ToString());
+            resource.Attributes.Should().ContainKey(nameof(Category.Name));
+            resource.Attributes[nameof(Category.Name)].Should().Be(CategoryName);
+            resource.Attributes.Should().NotContainKey(nameof(Category.Description));
+        }
+
+        [Fact]
+        public void MapWithDefaultsIgnoringAttributes2()
+        {
+            const int CategoryId = 1;
+            const string CategoryName = "Category1";
+            const string CategoryDescription = "Description Category1";
+
+            DocumentMapperConfig.NewConfig<Category>()
+                .Ignore(c => c.Description)
+                .MapWithDetaults();
+
+            var category = new Category
+            {
+                Id = CategoryId,
+                Name = CategoryName,
+                Description = CategoryDescription
+            };
+
+
+            var document = category.ToDocument();
+
+
+            var resource = (Resource)document.Data;
+            resource.Id.Should().Be(CategoryId.ToString());
+            resource.Attributes.Should().ContainKey(nameof(Category.Name));
+            resource.Attributes[nameof(Category.Name)].Should().Be(CategoryName);
+            resource.Attributes.Should().NotContainKey(nameof(Category.Description));
+        }
+
+        [Fact]
+        public void MapRelationshipWithDefaultsIgnoringFields()
+        {
+            const int CategoryId = 1;
+            const string CategoryName = "Category1";
+
+            DocumentMapperConfig.NewConfig<Product>()
+                .MapWithDetaults()
+                .Ignore(p => p.Category);
+
+            DocumentMapperConfig.NewConfig<Category>()
+                .MapWithDetaults();
+
+            DocumentMapperConfig.NewConfig<UnitOfMeasure>()
+               .MapWithDetaults();
+
+            var product = new Product
+            {
+                Category = new Category
+                {
+                    Id = CategoryId,
+                    Name = CategoryName
+                }
+            };
+
+
+            var document = product.ToDocument();
+
+
+            var resource = (Resource)document.Data;
+            resource.Relationships.Should().NotContainKey(nameof(Product.Category));
+        }
+
+        [Fact]
+        public void MapRelationshipWithDefaultsIgnoringFields2()
+        {
+            const int CategoryId = 1;
+            const string CategoryName = "Category1";
+
+            DocumentMapperConfig.NewConfig<Product>()
+                .Ignore(p => p.Category)
+                .MapWithDetaults();
+
+            DocumentMapperConfig.NewConfig<Category>()
+                .MapWithDetaults();
+
+            DocumentMapperConfig.NewConfig<UnitOfMeasure>()
+               .MapWithDetaults();
+
+            var product = new Product
+            {
+                Category = new Category
+                {
+                    Id = CategoryId,
+                    Name = CategoryName
+                }
+            };
+
+
+            var document = product.ToDocument();
+
+
+            var resource = (Resource)document.Data;
+            resource.Relationships.Should().NotContainKey(nameof(Product.Category));
+        }
     }
 
     public class Product
