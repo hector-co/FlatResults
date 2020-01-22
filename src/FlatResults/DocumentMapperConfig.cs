@@ -12,17 +12,6 @@ namespace FlatResults
         private static ConcurrentDictionary<Type, IResourceDefinition> _definitions = new ConcurrentDictionary<Type, IResourceDefinition>();
         private static ConcurrentDictionary<Type, HashSet<string>> _ignoredFields = new ConcurrentDictionary<Type, HashSet<string>>();
 
-        public static ResourceDefinitionMapperConfig<TType> ForType<TType>()
-        {
-            AdjustRelationships<TType>();
-            if (!_definitions.ContainsKey(typeof(TType)))
-            {
-                _definitions.TryAdd(typeof(TType), new ResourceDefinition<TType>());
-                _ignoredFields.TryAdd(typeof(TType), new HashSet<string>());
-            }
-            return new ResourceDefinitionMapperConfig<TType>(_definitions, _ignoredFields);
-        }
-
         public static ResourceDefinitionMapperConfig<TType> NewConfig<TType>()
         {
             AdjustRelationships<TType>();
@@ -39,6 +28,7 @@ namespace FlatResults
         public static void ClearConfigs()
         {
             _definitions = new ConcurrentDictionary<Type, IResourceDefinition>();
+            _ignoredFields = new ConcurrentDictionary<Type, HashSet<string>>();
         }
 
         internal static IResourceDefinition GetDefinition<TType>()
