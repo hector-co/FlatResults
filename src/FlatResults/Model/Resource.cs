@@ -1,5 +1,5 @@
 ﻿using Newtonsoft.Json;
-using System;
+using System.Collections.Generic;
 
 namespace FlatResults.Model
 {
@@ -23,7 +23,10 @@ namespace FlatResults.Model
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(Type, Id);
+            var hashCode = -1324594315;
+            hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(Type);
+            hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(Id);
+            return hashCode;
         }
     }
 }

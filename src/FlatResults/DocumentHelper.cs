@@ -8,8 +8,25 @@ namespace FlatResults
     {
         public static Document ToDocument<T>(this T obj, bool identifierOnly = false)
         {
-            var definition = DocumentMapperConfig.GetDefinition<T>();
-            return definition.ToDocument(obj, identifierOnly);
+            if (DocumentMapperConfig.IsWrapperType(typeof(T)))
+            {
+                var (data, meta) = DocumentMapperConfig.GetWrapperTypeDefinition(typeof(T).GetGenericTypeDefinition());
+                var document = (Document)DocumentExtensions.ToDocument(data(obj));
+                if (meta != null)
+                {
+                    var metaInfos = meta(obj);
+                    foreach (var info in metaInfos)
+                    {
+                        document.AddMeta(info.Key, info.Value);
+                    }
+                }
+                return document;
+            }
+            else
+            {
+                var definition = DocumentMapperConfig.GetDefinition<T>();
+                return definition.ToDocument(obj, identifierOnly);
+            }
         }
 
         public static Document ToDocument<T>(this IEnumerable<T> objs, bool identifiersOnly = false)

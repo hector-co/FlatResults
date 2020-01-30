@@ -8,6 +8,7 @@ namespace FlatResults.Model
     internal class ResourceDefinition<T> : IResourceDefinition
     {
         private readonly Type _type;
+        private string _typeName;
         private Func<object, object> _id;
         private readonly Dictionary<string, (Func<object, object> setter, Type type)> _attributes;
         private readonly Dictionary<string, (Func<object, object> setter, Type type)> _relationships;
@@ -33,11 +34,19 @@ namespace FlatResults.Model
             _id = prop.GetValue;
         }
 
+        public void SetTypeName(string typeName)
+        {
+            if (string.IsNullOrEmpty(typeName))
+                _typeName = typeof(T).Name;
+            else
+                _typeName = typeName;
+        }
+
         public void AddAttribute(string name, Type type)
         {
             var prop = _type.GetCachedProperties().FirstOrDefault(p => p.Name == name);
             if (prop == null) return;
-            _attributes.TryAdd(name, (prop.GetValue, type));
+            _attributes.Add(name, (prop.GetValue, type));
         }
 
         public void RemoveAttribute(string name)
@@ -49,7 +58,7 @@ namespace FlatResults.Model
         {
             var prop = _type.GetCachedProperties().FirstOrDefault(p => p.Name == name);
             if (prop == null) return;
-            _relationships.TryAdd(name, (prop.GetValue, type));
+            _relationships.Add(name, (prop.GetValue, type));
         }
 
         public void RemoveRelationship(string name)
@@ -67,7 +76,7 @@ namespace FlatResults.Model
                 document.Data = new Resource
                 {
                     Id = _id(obj).ToString(),
-                    Type = typeof(T).Name
+                    Type = _typeName
                 };
                 return document;
             }
@@ -83,7 +92,7 @@ namespace FlatResults.Model
             var resource = new Resource
             {
                 Id = _id(obj).ToString(),
-                Type = typeof(T).Name
+                Type = _typeName
             };
 
             if (_attributes.Any())

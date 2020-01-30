@@ -1,7 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <Version>0.2.0</Version>
+    <Authors>Hector Carballo</Authors>
+    <Company>Hco</Company>
+    <Copyright>Copyright © 2020 Hector Carballo</Copyright>
+    <PackageProjectUrl>https://github.com/hector-co/FlatResults</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/hector-co/FlatResults</RepositoryUrl>
+    <Description>Flat results</Description>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
 
   <ItemGroup>

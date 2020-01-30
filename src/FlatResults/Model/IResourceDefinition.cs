@@ -6,6 +6,7 @@ namespace FlatResults.Model
     public interface IResourceDefinition
     {
         void SetId(string name);
+        void SetTypeName(string typeName);
         void AddAttribute(string name, Type type);
         void RemoveAttribute(string name);
         void AddRelationShip(string name, Type type);

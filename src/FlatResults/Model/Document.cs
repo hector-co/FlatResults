@@ -37,14 +37,22 @@ namespace FlatResults.Model
                 ((ResourceCollection)Data).Add(resource);
         }
 
-        internal void AppendIncluded(Resource resource)
+        public void AppendIncluded(Document document)
+        {
+            if (document == null) return;
+            if (Included == null) Included = new HashSet<Resource>();
+            AppendIncluded(document.Data as dynamic);
+            AppendIncluded(document.Included);
+        }
+
+        public void AppendIncluded(Resource resource)
         {
             if (resource == null) return;
             if (Included == null) Included = new HashSet<Resource>();
             Included.Add(resource);
         }
 
-        internal void AppendIncluded(ResourceCollection resources)
+        public void AppendIncluded(ResourceCollection resources)
         {
             if (resources == null) return;
             if (Included == null) Included = new HashSet<Resource>();
@@ -54,7 +62,7 @@ namespace FlatResults.Model
             }
         }
 
-        internal void AppendIncluded(HashSet<Resource> included)
+        public void AppendIncluded(HashSet<Resource> included)
         {
             if (included == null) return;
             if (Included == null)

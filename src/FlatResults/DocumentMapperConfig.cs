@@ -10,7 +10,10 @@ namespace FlatResults
     public static class DocumentMapperConfig
     {
         private static ConcurrentDictionary<Type, IResourceDefinition> _definitions = new ConcurrentDictionary<Type, IResourceDefinition>();
+
         private static ConcurrentDictionary<Type, HashSet<string>> _ignoredFields = new ConcurrentDictionary<Type, HashSet<string>>();
+        private static ConcurrentDictionary<Type, (Func<dynamic, dynamic> data, Func<dynamic, Dictionary<string, object>> meta)> _wrapperTypes
+            = new ConcurrentDictionary<Type, (Func<dynamic, dynamic> data, Func<dynamic, Dictionary<string, object>> meta)>();
 
         public static ResourceDefinitionMapperConfig<TType> NewConfig<TType>()
         {
@@ -29,6 +32,18 @@ namespace FlatResults
         {
             _definitions = new ConcurrentDictionary<Type, IResourceDefinition>();
             _ignoredFields = new ConcurrentDictionary<Type, HashSet<string>>();
+            _wrapperTypes = new ConcurrentDictionary<Type, (Func<dynamic, dynamic> data, Func<dynamic, Dictionary<string, object>> meta)>();
+        }
+
+        public static bool IsValidType(Type type)
+        {
+            if (type == typeof(Document))
+                if (_definitions.ContainsKey(type)) return true;
+            if (_wrapperTypes.ContainsKey(type)) return true;
+            if (!type.IsGenericType) return false;
+
+            if (_definitions.ContainsKey(type.GetGenericArguments()[0])) return true;
+            return _wrapperTypes.ContainsKey(type.GetGenericTypeDefinition());
         }
 
         internal static IResourceDefinition GetDefinition<TType>()
@@ -37,6 +52,25 @@ namespace FlatResults
             if (!_definitions.ContainsKey(key))
                 throw new ConfigNotFoundException();
             return _definitions[key];
+        }
+
+        public static void AddWrapperType(Type type, Func<dynamic, dynamic> data, Func<dynamic, Dictionary<string, object>> meta = null)
+        {
+            if (_wrapperTypes.ContainsKey(type)) _wrapperTypes.TryRemove(type, out var _);
+            _wrapperTypes.TryAdd(type, (data, meta));
+        }
+
+        public static (Func<dynamic, dynamic> data, Func<dynamic, Dictionary<string, object>> meta) GetWrapperTypeDefinition(Type type)
+        {
+            if (_wrapperTypes.ContainsKey(type)) return _wrapperTypes[type];
+            return _wrapperTypes[type.GetGenericTypeDefinition()];
+        }
+
+        internal static bool IsWrapperType(Type type)
+        {
+            if (_wrapperTypes.ContainsKey(type)) return true;
+            if (!type.IsGenericType) return false;
+            return _wrapperTypes.ContainsKey(type.GetGenericTypeDefinition());
         }
 
         private static void AdjustRelationships<TType>()
@@ -78,6 +112,12 @@ namespace FlatResults
             return WithId(propInfo.Name);
         }
 
+        public ResourceDefinitionMapperConfig<TType> WithTypeName(string typeName)
+        {
+            _definitions[typeof(TType)].SetTypeName(typeName);
+            return this;
+        }
+
         public ResourceDefinitionMapperConfig<TType> WithAttribute(string name, Type type)
         {
             _definitions[typeof(TType)].AddAttribute(name, type);
@@ -107,7 +147,8 @@ namespace FlatResults
             foreach (var propInfo in typeof(TType).GetCachedProperties())
             {
                 if (_ignoredFields[typeof(TType)].Contains(propInfo.Name)) continue;
-                if (_definitions.ContainsKey(propInfo.PropertyType))
+                if (_definitions.ContainsKey(propInfo.PropertyType) ||
+                    (propInfo.PropertyType.IsGenericType && _definitions.ContainsKey(propInfo.PropertyType.GetGenericArguments()[0])))
                     _definitions[typeof(TType)].AddRelationShip(propInfo.Name, propInfo.PropertyType);
                 else
                     _definitions[typeof(TType)].AddAttribute(propInfo.Name, propInfo.PropertyType);
