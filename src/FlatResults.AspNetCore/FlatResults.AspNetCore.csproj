@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Version>0.1.0</Version>
+    <Authors>Hector Carballo</Authors>
+    <Company>Hco</Company>
+    <Description>Flat results aspnetcore</Description>
+    <Copyright>Copyright © 2020 Hector Carballo</Copyright>
+    <PackageProjectUrl>https://github.com/hector-co/FlatResults</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/hector-co/FlatResults</RepositoryUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FlatResults\FlatResults.csproj" />
+  </ItemGroup>
+
+</Project>
