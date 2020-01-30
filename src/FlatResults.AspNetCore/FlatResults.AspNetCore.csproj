@@ -10,6 +10,7 @@
     <Copyright>Copyright © 2020 Hector Carballo</Copyright>
     <PackageProjectUrl>https://github.com/hector-co/FlatResults</PackageProjectUrl>
     <RepositoryUrl>https://github.com/hector-co/FlatResults</RepositoryUrl>
+    <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,6 +19,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FlatResults\FlatResults.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\LICENSE.txt">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>
