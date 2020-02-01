@@ -69,7 +69,7 @@ namespace FlatResults.Model
         public Document ToDocument(object obj, bool identifierOnly = false)
         {
             if (_id == null) throw new IdPropertyNotFoundException();
-            if (!(obj is T tObj)) throw new FlatResultsException("Invalid type");
+            if (!(obj is T tObj)) throw new FlatResultsException($"Invalid type '{typeof(T).FullName}'");
             var document = new Document();
             if (identifierOnly)
             {
