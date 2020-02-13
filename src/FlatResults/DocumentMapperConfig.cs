@@ -38,8 +38,7 @@ namespace FlatResults
         public static bool IsValidType(Type type)
         {
             if (type == null) return false;
-            if (type == typeof(Document))
-                if (_definitions.ContainsKey(type)) return true;
+            if (type == typeof(Document)) return true;
             if (_wrapperTypes.ContainsKey(type)) return true;
             if (!type.IsGenericType) return false;
 
