@@ -13,6 +13,6 @@ namespace FlatResults.Model
         void RemoveRelationship(string name);
         IReadOnlyDictionary<string, Type> Attributes { get; }
         IReadOnlyDictionary<string, Type> Relationships { get; }
-        Document ToDocument(object obj, bool identifierOnly = false);
+        Document ToDocument(object obj, bool identifierOnly = false, IEnumerable<string> fields = null);
     }
 }

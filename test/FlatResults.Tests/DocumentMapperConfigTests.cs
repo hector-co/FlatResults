@@ -657,6 +657,179 @@ namespace FlatResults.Tests
             resource.Attributes.Should().ContainKey(nameof(Category.Description));
             resource.Attributes[nameof(Category.Description)].Should().Be(CategoryDescription);
         }
+
+        [Fact]
+        public void SelectFields()
+        {
+            const int ProductId = 1;
+            const string ProductName = "Product1";
+
+            DocumentMapperConfig.NewConfig<Product>()
+                .MapWithDetaults();
+
+            var product = new Product
+            {
+                Id = ProductId,
+                Name = ProductName,
+                Cost = 20,
+                Price = 25,
+                Active = true
+            };
+
+
+            var document = product.ToDocument(fields: new[] { "name" });
+
+
+            var resource = (Resource)document.Data;
+            resource.Attributes.Keys.Count().Should().Be(1);
+            resource.Attributes.Should().ContainKey(nameof(Product.Name));
+            resource.Attributes[nameof(Product.Name)].Should().Be(ProductName);
+        }
+
+        [Fact]
+        public void SelectFieldsForRelationship()
+        {
+            const int ProductId = 1;
+            const string ProductName = "Product1";
+            const int CategoryId = 1;
+            const string CategoryName = "Category1";
+
+            DocumentMapperConfig.NewConfig<Product>()
+                .MapWithDetaults();
+
+            DocumentMapperConfig.NewConfig<Category>()
+                .MapWithDetaults();
+
+            var product = new Product
+            {
+                Id = ProductId,
+                Name = ProductName,
+                Cost = 20,
+                Price = 25,
+                Active = true,
+                Category = new Category
+                {
+                    Id = CategoryId,
+                    Name = CategoryName,
+                    Description = "Description"
+                }
+            };
+
+
+            var document = product.ToDocument(fields: new[] { "name", "category.name" });
+
+            var categoryResource = document.Included.ElementAt(0);
+            categoryResource.Attributes.Keys.Count().Should().Be(1);
+            categoryResource.Attributes.Should().ContainKey(nameof(Category.Name));
+            categoryResource.Attributes[nameof(Category.Name)].Should().Be(CategoryName);
+        }
+
+        [Fact]
+        public void MapOnlySelectedRelationships()
+        {
+            const int ProductId = 1;
+            const string ProductName = "Product1";
+            const int CategoryId = 1;
+            const string CategoryName = "Category1";
+
+            DocumentMapperConfig.NewConfig<Product>()
+                .MapWithDetaults();
+
+            DocumentMapperConfig.NewConfig<Category>()
+                .MapWithDetaults();
+
+            DocumentMapperConfig.NewConfig<UnitOfMeasure>()
+                .MapWithDetaults();
+
+            var product = new Product
+            {
+                Id = ProductId,
+                Name = ProductName,
+                Cost = 20,
+                Price = 25,
+                Active = true,
+                Category = new Category
+                {
+                    Id = CategoryId,
+                    Name = CategoryName,
+                    Description = "Description"
+                },
+                Units = new List<UnitOfMeasure>
+                {
+                    new UnitOfMeasure
+                    {
+                        Id = 1,
+                        Name = "unit1"
+                    },
+                    new UnitOfMeasure
+                    {
+                        Id = 2,
+                        Name = "unit2"
+                    }
+                }
+            };
+
+
+            var document = product.ToDocument(fields: new[] { "name", "category.name" });
+
+            (document.Data as Resource).Relationships.Count().Should().Be(1);
+        }
+
+        [Fact]
+        public void IncludeOnlySelectedRelationships()
+        {
+            const int ProductId = 1;
+            const string ProductName = "Product1";
+            const int CategoryId = 1;
+            const string CategoryName = "Category1";
+
+            DocumentMapperConfig.NewConfig<Product>()
+                .MapWithDetaults();
+
+            DocumentMapperConfig.NewConfig<Category>()
+                .MapWithDetaults();
+
+            DocumentMapperConfig.NewConfig<UnitOfMeasure>()
+                .MapWithDetaults();
+
+            var product = new Product
+            {
+                Id = ProductId,
+                Name = ProductName,
+                Cost = 20,
+                Price = 25,
+                Active = true,
+                Category = new Category
+                {
+                    Id = CategoryId,
+                    Name = CategoryName,
+                    Description = "Description"
+                },
+                Units = new List<UnitOfMeasure>
+                {
+                    new UnitOfMeasure
+                    {
+                        Id = 1,
+                        Name = "unit1"
+                    },
+                    new UnitOfMeasure
+                    {
+                        Id = 2,
+                        Name = "unit2"
+                    }
+                }
+            };
+
+
+            var document = product.ToDocument(fields: new[] { "name", "category.name" });
+
+            document.Included.Count().Should().Be(1);
+
+            var categoryResource = document.Included.ElementAt(0);
+            categoryResource.Attributes.Keys.Count().Should().Be(1);
+            categoryResource.Attributes.Should().ContainKey(nameof(Category.Name));
+            categoryResource.Attributes[nameof(Category.Name)].Should().Be(CategoryName);
+        }
     }
 
     public class Product
@@ -683,6 +856,12 @@ namespace FlatResults.Tests
         public int Id { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }
+    }
+
+    public class ProductParent
+    {
+        public int Id { get; set; }
+        public Product Product { get; set; }
     }
 
     public class ResultModel<T>

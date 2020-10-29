@@ -6,12 +6,12 @@ namespace FlatResults
 {
     public static class DocumentExtensions
     {
-        public static Document ToDocument<T>(this T obj, bool identifierOnly = false)
+        public static Document ToDocument<T>(this T obj, bool identifierOnly = false, IEnumerable<string> fields = null)
         {
             if (DocumentMapperConfig.IsWrapperType(typeof(T)))
             {
                 var (data, meta) = DocumentMapperConfig.GetWrapperTypeDefinition(typeof(T).GetGenericTypeDefinition());
-                var document = (Document)DocumentExtensions.ToDocument(data(obj));
+                var document = (Document)DocumentExtensions.ToDocument(data(obj), fields: fields);
                 if (meta != null)
                 {
                     var metaInfos = meta(obj);
@@ -25,11 +25,11 @@ namespace FlatResults
             else
             {
                 var definition = DocumentMapperConfig.GetDefinition<T>();
-                return definition.ToDocument(obj, identifierOnly);
+                return definition.ToDocument(obj, identifierOnly, fields);
             }
         }
 
-        public static Document ToDocument<T>(this IEnumerable<T> objs, bool identifiersOnly = false)
+        public static Document ToDocument<T>(this IEnumerable<T> objs, bool identifiersOnly = false, IEnumerable<string> fields = null)
         {
             var document = new Document
             {
@@ -37,19 +37,19 @@ namespace FlatResults
             };
             foreach (var obj in objs)
             {
-                document.Append(ToDocument(obj, identifiersOnly));
+                document.Append(ToDocument(obj, identifiersOnly, fields));
             }
             return document;
         }
 
-        public static Document ToDocument<T>(this T[] objs, bool identifiersOnly = false)
+        public static Document ToDocument<T>(this T[] objs, bool identifiersOnly = false, IEnumerable<string> fields = null)
         {
-            return ToDocument(objs.AsEnumerable(), identifiersOnly);
+            return ToDocument(objs.AsEnumerable(), identifiersOnly, fields);
         }
 
-        public static Document ToDocument<T>(this List<T> objs, bool identifiersOnly = false)
+        public static Document ToDocument<T>(this List<T> objs, bool identifiersOnly = false, IEnumerable<string> fields = null)
         {
-            return ToDocument(objs.AsEnumerable(), identifiersOnly);
+            return ToDocument(objs.AsEnumerable(), identifiersOnly, fields);
         }
     }
 }

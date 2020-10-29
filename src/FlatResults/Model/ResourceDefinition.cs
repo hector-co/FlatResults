@@ -66,7 +66,7 @@ namespace FlatResults.Model
             _relationships.Remove(name);
         }
 
-        public Document ToDocument(object obj, bool identifierOnly = false)
+        public Document ToDocument(object obj, bool identifierOnly = false, IEnumerable<string> fields = null)
         {
             if (_id == null) throw new IdPropertyNotFoundException();
             if (!(obj is T tObj)) throw new FlatResultsException($"Invalid type '{typeof(T).FullName}'");
@@ -81,13 +81,13 @@ namespace FlatResults.Model
                 return document;
             }
 
-            document.Data = ToResource(tObj);
-            AddIncluded(tObj, document);
+            document.Data = ToResource(tObj, fields);
+            AddIncluded(tObj, document, fields);
 
             return document;
         }
 
-        private Resource ToResource(T obj)
+        private Resource ToResource(T obj, IEnumerable<string> fields = null)
         {
             var resource = new Resource
             {
@@ -98,7 +98,12 @@ namespace FlatResults.Model
             if (_attributes.Any())
             {
                 resource.Attributes = new ResourceAttributes();
-                foreach (var attrKey in _attributes.Keys)
+
+                var keys = fields == null
+                    ? _attributes.Keys
+                    : _attributes.Keys.Where(k => fields.Contains(k, StringComparer.InvariantCultureIgnoreCase));
+
+                foreach (var attrKey in keys)
                 {
                     resource.Attributes.Add(attrKey, _attributes[attrKey].setter(obj));
                 }
@@ -109,6 +114,12 @@ namespace FlatResults.Model
                 resource.Relationships = new ResourceRelationships();
                 foreach (var relKey in _relationships.Keys)
                 {
+                    var selected = fields == null
+                        ? true
+                        : fields.Any(f => f.StartsWith($"{relKey}.", StringComparison.InvariantCultureIgnoreCase) || f.Equals(relKey, StringComparison.InvariantCultureIgnoreCase));
+
+                    if (!selected) continue;
+
                     var relValue = _relationships[relKey].setter(obj);
                     if (relValue == null) continue;
                     resource.Relationships.Add(relKey, DocumentExtensions.ToDocument(relValue as dynamic, true));
@@ -118,7 +129,7 @@ namespace FlatResults.Model
             return resource;
         }
 
-        private void AddIncluded(T obj, Document document)
+        private void AddIncluded(T obj, Document document, IEnumerable<string> fields = null)
         {
             if (_relationships.Any())
             {
@@ -126,7 +137,13 @@ namespace FlatResults.Model
                 {
                     var includedValue = _relationships[relKey].setter(obj);
                     if (includedValue == null) continue;
-                    var relDocument = (Document)DocumentExtensions.ToDocument(includedValue as dynamic);
+
+                    var relFields = fields?.Where(f => f.StartsWith($"{relKey}.", StringComparison.InvariantCultureIgnoreCase)).Select(f => f.Split('.')[1]);
+
+                    if (fields != null && !relFields.Any())
+                        continue;
+
+                    var relDocument = (Document)DocumentExtensions.ToDocument(includedValue as dynamic, fields: relFields);
                     document.AppendIncluded(relDocument.Data as dynamic);
                     if (relDocument.Included != null)
                         document.AppendIncluded(relDocument.Included);
