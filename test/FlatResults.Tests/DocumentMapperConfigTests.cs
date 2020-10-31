@@ -830,6 +830,60 @@ namespace FlatResults.Tests
             categoryResource.Attributes.Should().ContainKey(nameof(Category.Name));
             categoryResource.Attributes[nameof(Category.Name)].Should().Be(CategoryName);
         }
+
+        [Fact]
+        public void IncludeOnlySelectedRelationshipsByName()
+        {
+            const int ProductId = 1;
+            const string ProductName = "Product1";
+            const int CategoryId = 1;
+            const string CategoryName = "Category1";
+
+            DocumentMapperConfig.NewConfig<Product>()
+                .MapWithDetaults();
+
+            DocumentMapperConfig.NewConfig<Category>()
+                .MapWithDetaults();
+
+            DocumentMapperConfig.NewConfig<UnitOfMeasure>()
+                .MapWithDetaults();
+
+            var product = new Product
+            {
+                Id = ProductId,
+                Name = ProductName,
+                Cost = 20,
+                Price = 25,
+                Active = true,
+                Category = new Category
+                {
+                    Id = CategoryId,
+                    Name = CategoryName,
+                    Description = "Description"
+                },
+                Units = new List<UnitOfMeasure>
+                {
+                    new UnitOfMeasure
+                    {
+                        Id = 1,
+                        Name = "unit1"
+                    },
+                    new UnitOfMeasure
+                    {
+                        Id = 2,
+                        Name = "unit2"
+                    }
+                }
+            };
+
+
+            var document = product.ToDocument(fields: new[] { "name", "category" });
+
+            document.Included.Count().Should().Be(1);
+
+            var categoryResource = document.Included.ElementAt(0);
+            categoryResource.Attributes.Keys.Count().Should().Be(3);
+        }
     }
 
     public class Product

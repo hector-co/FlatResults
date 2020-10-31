@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <Version>0.4.1</Version>
+    <Version>0.4.2</Version>
     <Authors>Hector Carballo</Authors>
     <Company>Hco</Company>
     <Copyright>Copyright © 2020 Hector Carballo</Copyright>
@@ -11,8 +11,8 @@
     <Description>Flat results</Description>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
-    <AssemblyVersion>0.4.1.0</AssemblyVersion>
-    <FileVersion>0.4.1.0</FileVersion>
+    <AssemblyVersion>0.4.2.0</AssemblyVersion>
+    <FileVersion>0.4.2.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>

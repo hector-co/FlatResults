@@ -138,10 +138,17 @@ namespace FlatResults.Model
                     var includedValue = _relationships[relKey].setter(obj);
                     if (includedValue == null) continue;
 
-                    var relFields = fields?.Where(f => f.StartsWith($"{relKey}.", StringComparison.InvariantCultureIgnoreCase)).Select(f => f.Split('.')[1]);
+                    IEnumerable<string> relFields = null;
 
-                    if (fields != null && !relFields.Any())
-                        continue;
+                    if (fields != null)
+                    {
+                        relFields = fields?.Where(f => f.StartsWith($"{relKey}.", StringComparison.InvariantCultureIgnoreCase)).Select(f => f.Split('.')[1]);
+
+                        if (!relFields.Any() && fields.Any(f => f.Equals(relKey, StringComparison.InvariantCultureIgnoreCase)))
+                            relFields = null;
+                        else if (!relFields.Any())
+                            continue;
+                    }
 
                     var relDocument = (Document)DocumentExtensions.ToDocument(includedValue as dynamic, fields: relFields);
                     document.AppendIncluded(relDocument.Data as dynamic);
